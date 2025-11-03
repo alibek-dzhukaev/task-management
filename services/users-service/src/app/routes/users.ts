@@ -9,7 +9,7 @@ import { usersStorage } from '../storage/users.storage';
 
 export default async function (fastify: FastifyInstance) {
   fastify.get('/users', async (request, reply) => {
-    const users = usersStorage.getAllUsers();
+    const users = await usersStorage.getAllUsers();
     
     const sanitizedUsers: UserResponse[] = users.map(user => ({
       id: user.id,
@@ -30,7 +30,7 @@ export default async function (fastify: FastifyInstance) {
   fastify.get<{ Params: { id: string } }>('/users/:id', async (request, reply) => {
     const { id } = request.params;
 
-    const user = usersStorage.findById(id);
+    const user = await usersStorage.findById(id);
     if (!user) {
       const response: ApiResponse = {
         success: false,
@@ -87,7 +87,7 @@ export default async function (fastify: FastifyInstance) {
       }
 
       try {
-        const updatedUser = usersStorage.updateUser(id, updateData);
+        const updatedUser = await usersStorage.updateUser(id, updateData);
         
         if (!updatedUser) {
           const response: ApiResponse = {
@@ -134,7 +134,7 @@ export default async function (fastify: FastifyInstance) {
   fastify.delete<{ Params: { id: string } }>('/users/:id', async (request, reply) => {
     const { id } = request.params;
 
-    const deleted = usersStorage.deleteUser(id);
+    const deleted = await usersStorage.deleteUser(id);
     
     if (!deleted) {
       const response: ApiResponse = {

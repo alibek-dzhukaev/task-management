@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "baseUrl": ".",
     "composite": true,
     "declarationMap": true,
     "emitDeclarationOnly": true,
@@ -16,6 +17,10 @@
     "skipLibCheck": true,
     "strict": true,
     "target": "es2022",
-    "customConditions": ["@task-management/source"]
+    "customConditions": ["@task-management/source"],
+    "paths": {
+      "@task-management/shared-types": ["libs/shared/types/src/index.ts"],
+      "@task-management/database": ["libs/shared/database/src/index.ts"]
+    }
   }
 }

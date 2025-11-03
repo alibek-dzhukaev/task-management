@@ -24,7 +24,7 @@ export default async function (fastify: FastifyInstance) {
       return reply.code(HttpStatus.BAD_REQUEST).send(response);
     }
 
-    const user = usersStorage.findByEmail(email);
+    const user = await usersStorage.findByEmail(email);
     if (!user) {
       const response: ApiResponse = {
         success: false,
@@ -105,7 +105,7 @@ export default async function (fastify: FastifyInstance) {
     }
 
     try {
-      const user = usersStorage.createUser({ email, password, name });
+      const user = await usersStorage.createUser({ email, password, name });
       const token = generateToken(user.id, user.email);
 
       const authResponse: AuthResponse = {

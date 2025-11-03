@@ -1,3 +1,5 @@
+import { prisma } from '@task-management/database';
+
 interface StoredUser {
   id: string;
   email: string;
@@ -8,59 +10,37 @@ interface StoredUser {
 }
 
 class UsersStorage {
-  private users: Map<string, StoredUser> = new Map();
-  private emailIndex: Map<string, string> = new Map(); // email -> userId
-
-  constructor() {
-    this.createUser({
-      email: 'admin@test.com',
-      password: 'admin123',
-      name: 'Admin User',
-    });
-
-    this.createUser({
-      email: 'user@test.com',
-      password: 'user123',
-      name: 'Test User',
-    });
-  }
-
-  createUser(data: { email: string; password: string; name: string }): StoredUser {
-    if (this.emailIndex.has(data.email)) {
+  async createUser(data: { email: string; password: string; name: string }): Promise<StoredUser> {
+    const existingUser = await this.findByEmail(data.email);
+    if (existingUser) {
       throw new Error('Email already exists');
     }
 
-    const user: StoredUser = {
-      id: `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      email: data.email,
-      password: data.password,
-      name: data.name,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    this.users.set(user.id, user);
-    this.emailIndex.set(user.email, user.id);
+    const user = await prisma.user.create({
+      data,
+    });
 
     return user;
   }
 
-  findByEmail(email: string): StoredUser | undefined {
-    const userId = this.emailIndex.get(email);
-    if (!userId) return undefined;
-    return this.users.get(userId);
+  async findByEmail(email: string): Promise<StoredUser | null> {
+    return prisma.user.findUnique({
+      where: { email },
+    });
   }
 
-  findById(id: string): StoredUser | undefined {
-    return this.users.get(id);
+  async findById(id: string): Promise<StoredUser | null> {
+    return prisma.user.findUnique({
+      where: { id },
+    });
   }
 
   verifyPassword(user: StoredUser, password: string): boolean {
     return user.password === password;
   }
 
-  getAllUsers(): StoredUser[] {
-    return Array.from(this.users.values());
+  async getAllUsers(): Promise<StoredUser[]> {
+    return prisma.user.findMany();
   }
 
   sanitizeUser(user: StoredUser): Omit<StoredUser, 'password'> {
@@ -69,6 +49,5 @@ class UsersStorage {
   }
 }
 
-// Singleton instance
 export const usersStorage = new UsersStorage();
 

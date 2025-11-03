@@ -1,3 +1,5 @@
+import { prisma } from '@task-management/database';
+
 interface StoredUser {
   id: string;
   email: string;
@@ -8,84 +10,48 @@ interface StoredUser {
 }
 
 class UsersStorage {
-  private users: Map<string, StoredUser> = new Map();
-  private emailIndex: Map<string, string> = new Map();
-
-  constructor() {
-    this.createUser({
-      email: 'admin@test.com',
-      password: 'admin123',
-      name: 'Admin User',
-    });
-
-    this.createUser({
-      email: 'user@test.com',
-      password: 'user123',
-      name: 'Test User',
+  async findById(id: string): Promise<StoredUser | null> {
+    return prisma.user.findUnique({
+      where: { id },
     });
   }
 
-  createUser(data: { email: string; password: string; name: string }): StoredUser {
-    if (this.emailIndex.has(data.email)) {
-      throw new Error('Email already exists');
-    }
-
-    const user: StoredUser = {
-      id: `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      email: data.email,
-      password: data.password,
-      name: data.name,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    this.users.set(user.id, user);
-    this.emailIndex.set(user.email, user.id);
-
-    return user;
+  async findByEmail(email: string): Promise<StoredUser | null> {
+    return prisma.user.findUnique({
+      where: { email },
+    });
   }
 
-  findById(id: string): StoredUser | undefined {
-    return this.users.get(id);
-  }
-
-  findByEmail(email: string): StoredUser | undefined {
-    const userId = this.emailIndex.get(email);
-    if (!userId) return undefined;
-    return this.users.get(userId);
-  }
-
-  updateUser(id: string, data: { email?: string; name?: string; password?: string }): StoredUser | null {
-    const user = this.users.get(id);
+  async updateUser(id: string, data: { email?: string; name?: string; password?: string }): Promise<StoredUser | null> {
+    const user = await this.findById(id);
     if (!user) return null;
 
     if (data.email && data.email !== user.email) {
-      if (this.emailIndex.has(data.email)) {
+      const existingUser = await this.findByEmail(data.email);
+      if (existingUser) {
         throw new Error('Email already exists');
       }
-      this.emailIndex.delete(user.email);
-      this.emailIndex.set(data.email, user.id);
-      user.email = data.email;
     }
 
-    if (data.name) user.name = data.name;
-    if (data.password) user.password = data.password;
-    user.updatedAt = new Date();
-
-    return user;
+    return prisma.user.update({
+      where: { id },
+      data,
+    });
   }
 
-  deleteUser(id: string): boolean {
-    const user = this.users.get(id);
-    if (!user) return false;
-
-    this.emailIndex.delete(user.email);
-    this.users.delete(id);
-    return true;
+  async deleteUser(id: string): Promise<boolean> {
+    try {
+      await prisma.user.delete({
+        where: { id },
+      });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
-  getAllUsers(): StoredUser[] {
-    return Array.from(this.users.values());
+  async getAllUsers(): Promise<StoredUser[]> {
+    return prisma.user.findMany();
   }
 
   sanitizeUser(user: StoredUser): Omit<StoredUser, 'password'> {
