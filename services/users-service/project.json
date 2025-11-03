@@ -1,0 +1,25 @@
+{
+  "name": "users-service",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "services/users-service/src",
+  "projectType": "application",
+  "tags": [],
+  "targets": {
+    "build": {
+      "executor": "@nx/esbuild:esbuild",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/services/users-service",
+        "main": "services/users-service/src/main.ts",
+        "tsConfig": "services/users-service/tsconfig.build.json",
+        "assets": [],
+        "bundle": true,
+        "format": ["cjs"],
+        "platform": "node",
+        "target": "node18",
+        "external": ["@prisma/client", "ioredis"]
+      }
+    }
+  }
+}
+

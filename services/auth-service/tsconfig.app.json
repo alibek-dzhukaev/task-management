@@ -21,6 +21,9 @@
   ],
   "references": [
     {
+      "path": "../../libs/shared/database"
+    },
+    {
       "path": "../../libs/shared/types/tsconfig.lib.json"
     }
   ]

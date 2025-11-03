@@ -6,9 +6,22 @@ import type {
 } from '@task-management/shared-types';
 import { HttpStatus } from '@task-management/shared-types';
 import { usersStorage } from '../storage/users.storage';
+import { cache } from '@task-management/cache';
 
 export default async function (fastify: FastifyInstance) {
   fastify.get('/users', async (request, reply) => {
+    const cacheKey = 'users:all';
+    const cached = await cache.get<UserResponse[]>(cacheKey);
+    
+    if (cached) {
+      console.log('Cache HIT: users list');
+      return reply.code(HttpStatus.OK).send({
+        success: true,
+        data: cached,
+      });
+    }
+    
+    console.log('Cache MISS: users list');
     const users = await usersStorage.getAllUsers();
     
     const sanitizedUsers: UserResponse[] = users.map(user => ({
@@ -18,6 +31,8 @@ export default async function (fastify: FastifyInstance) {
       createdAt: user.createdAt.toISOString(),
       updatedAt: user.updatedAt.toISOString(),
     }));
+
+    await cache.set(cacheKey, sanitizedUsers, 300);
 
     const response: ApiResponse<UserResponse[]> = {
       success: true,
@@ -30,6 +45,18 @@ export default async function (fastify: FastifyInstance) {
   fastify.get<{ Params: { id: string } }>('/users/:id', async (request, reply) => {
     const { id } = request.params;
 
+    const cacheKey = `user:${id}`;
+    const cached = await cache.get<UserResponse>(cacheKey);
+    
+    if (cached) {
+      console.log(`Cache HIT: user ${id}`);
+      return reply.code(HttpStatus.OK).send({
+        success: true,
+        data: cached,
+      });
+    }
+    
+    console.log(`Cache MISS: user ${id}`);
     const user = await usersStorage.findById(id);
     if (!user) {
       const response: ApiResponse = {
@@ -49,6 +76,8 @@ export default async function (fastify: FastifyInstance) {
       createdAt: user.createdAt.toISOString(),
       updatedAt: user.updatedAt.toISOString(),
     };
+
+    await cache.set(cacheKey, userResponse, 300);
 
     const response: ApiResponse<UserResponse> = {
       success: true,
@@ -100,6 +129,9 @@ export default async function (fastify: FastifyInstance) {
           return reply.code(HttpStatus.NOT_FOUND).send(response);
         }
 
+        await cache.del(`user:${id}`);
+        await cache.del('users:all');
+
         const userResponse: UserResponse = {
           id: updatedUser.id,
           email: updatedUser.email,
@@ -146,6 +178,9 @@ export default async function (fastify: FastifyInstance) {
       };
       return reply.code(HttpStatus.NOT_FOUND).send(response);
     }
+
+    await cache.del(`user:${id}`);
+    await cache.del('users:all');
 
     const response: ApiResponse = {
       success: true,

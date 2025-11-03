@@ -10,7 +10,6 @@ interface StoredUser {
 }
 
 class UsersStorage {
-  // Read operations - use read replicas (load balanced)
   async findById(id: string): Promise<StoredUser | null> {
     const db = getPrismaReadReplica();
     return db.user.findUnique({
@@ -30,7 +29,6 @@ class UsersStorage {
     return db.user.findMany();
   }
 
-  // Write operations - use master
   async updateUser(id: string, data: { email?: string; name?: string; password?: string }): Promise<StoredUser | null> {
     const user = await this.findById(id);
     if (!user) return null;

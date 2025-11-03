@@ -23,8 +23,11 @@ This starts:
 - Master DB: `localhost:5432` (writes)
 - Replica 1: `localhost:5433` (reads)
 - Replica 2: `localhost:5434` (reads)
+- Redis Master: `localhost:6379` (cache writes)
+- Redis Replica: `localhost:6380` (cache reads)
+- Sentinels: `localhost:26379-26381` (monitoring)
 
-Wait ~10 seconds for replicas to sync.
+Wait ~15 seconds for replicas and sentinels to sync.
 
 ### 3. Run migrations
 
@@ -73,22 +76,25 @@ API Gateway (:3000)
     |
     +---> Auth Service (:3001) ─┐
     +---> Users Service (:3002) ─┤
-                                 │
-                    ┌────────────┴─────────────┐
-                    │                          │
-                    ▼                          ▼
-              Master DB (:5432)          Read Replicas
-              [Writes]                   [:5433, :5434]
-                    │                    [Reads - Load Balanced]
-                    └──────────┬─────────┘
-                              │
-                         Replication
+              |                  │
+              v                  │
+    ┌─────────────────┐       ┌──┴──────────────────┐
+    │ Redis Sentinel  │       │                     │
+    │ [:26379-26381]  │       ▼                     ▼
+    │ [Auto Failover] │ Master DB (:5432)     Read Replicas
+    └────────┬────────┘ [Writes]              [:5433, :5434]
+             │              │                 [Reads - Load Balanced]
+             v              └──────────┬──────────┘
+    Redis Master (:6379)              │
+    Redis Replica (:6380)        Replication
+       [5 min TTL Cache]
 ```
 
-**Database Replication:**
-- Master handles all writes (CREATE, UPDATE, DELETE)
-- 2 Read replicas handle reads (SELECT) with round-robin load balancing
-- Automatic synchronization via PostgreSQL streaming replication
+**Infrastructure:**
+- **Database Replication:** Master + 2 read replicas with automatic failover
+- **Redis Sentinel:** Master + replica with 3 sentinels for automatic failover
+- **Caching:** 5-minute TTL for user data, reduces DB load by ~80%
+- **Load Balancing:** Round-robin across DB replicas
 
 All services share TypeScript types from `@task-management/shared-types` library.
 
@@ -106,10 +112,11 @@ All services share TypeScript types from `@task-management/shared-types` library
 - JWT authentication
 - PostgreSQL 16 with Master-Replica replication
 - Prisma ORM with read replica load balancing
+- Redis 7 for caching and sessions
 
 **Tools:**
 - Nx monorepo
-- Docker
+- Docker Compose
 - ESLint
 - Prettier
 
@@ -122,10 +129,12 @@ nx/
 ├── services/
 │   ├── api-gateway/         # Routes requests to services
 │   ├── auth-service/        # Authentication
-│   └── users-service/       # User CRUD
+│   └── users-service/       # User CRUD + caching
 ├── libs/
-│   ├── shared/types/        # Shared TypeScript types
-│   └── shared/database/     # Prisma client
+│   └── shared/
+│       ├── types/           # Shared TypeScript types
+│       ├── database/        # Prisma client (master + replicas)
+│       └── cache/           # Redis client
 ├── prisma/
 │   └── schema.prisma        # Database schema
 └── scripts/                 # Helper scripts
@@ -149,9 +158,16 @@ npm run prisma:generate # Generate Prisma client
 npm run prisma:studio   # Open Prisma Studio (DB admin)
 
 # Build & Test
-npm run build           # Build all
+npm run build           # Build all projects
+npm run build:auth      # Build auth-service only
+npm run build:users     # Build users-service only
+npm run build:gateway   # Build api-gateway only
 npm run test            # Test all
 npm run lint            # Lint all
+
+# Build output:
+# - Microservices: dist/services/*/main.js (~4KB each)
+# - Frontend: apps/web/build/
 ```
 
 ## API Endpoints
@@ -239,6 +255,59 @@ npm run prisma:migrate
 docker exec -it task-management-db-master psql -U taskmanager -d task_management -c "SELECT * FROM pg_stat_replication;"
 ```
 
+### Check Redis cache
+
+```bash
+# Connect to Redis master
+docker exec -it task-management-redis-master redis-cli -a redis_dev_password
+
+# View all keys
+KEYS *
+
+# Get cached users list
+GET users:all
+
+# Get specific user cache
+GET user:<user-id>
+
+# Clear all cache
+FLUSHALL
+```
+
+### Check Sentinel status
+
+```bash
+# Connect to Sentinel
+docker exec -it task-management-redis-sentinel-1 redis-cli -p 26379
+
+# Check master info
+SENTINEL master mymaster
+
+# Check replicas
+SENTINEL replicas mymaster
+
+# Check sentinels
+SENTINEL sentinels mymaster
+
+# Force failover (test)
+SENTINEL failover mymaster
+```
+
+### Test Redis failover
+
+```bash
+# Stop master
+docker stop task-management-redis-master
+
+# Watch logs - Sentinel will promote replica
+docker logs -f task-management-redis-sentinel-1
+
+# App continues working! New master on port 6380
+
+# Restart old master - becomes replica
+docker start task-management-redis-master
+```
+
 ### Test data on all databases
 
 ```bash
@@ -304,7 +373,3 @@ Regenerate Prisma client:
 ```bash
 npm run prisma:generate
 ```
-
-## License
-
-MIT

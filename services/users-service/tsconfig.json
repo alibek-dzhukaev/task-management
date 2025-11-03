@@ -4,6 +4,12 @@
   "include": [],
   "references": [
     {
+      "path": "../../libs/shared/database"
+    },
+    {
+      "path": "../../libs/shared/cache"
+    },
+    {
       "path": "../../libs/shared/types"
     },
     {

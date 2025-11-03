@@ -1,0 +1,25 @@
+{
+  "name": "auth-service",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "services/auth-service/src",
+  "projectType": "application",
+  "tags": [],
+  "targets": {
+    "build": {
+      "executor": "@nx/esbuild:esbuild",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/services/auth-service",
+        "main": "services/auth-service/src/main.ts",
+        "tsConfig": "services/auth-service/tsconfig.build.json",
+        "assets": [],
+        "bundle": true,
+        "format": ["cjs"],
+        "platform": "node",
+        "target": "node18",
+        "external": ["@prisma/client", "ioredis"]
+      }
+    }
+  }
+}
+

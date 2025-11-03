@@ -29,6 +29,12 @@
     },
     {
       "path": "./apps/web"
+    },
+    {
+      "path": "./libs/shared/database"
+    },
+    {
+      "path": "./libs/shared/cache"
     }
   ]
 }
