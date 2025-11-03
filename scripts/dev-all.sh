@@ -2,15 +2,15 @@
 
 # Скрипт для запуска ВСЕХ сервисов одновременно
 
-echo "🚀 Запуск ВСЕХ сервисов в монорепозитории..."
+echo "Starting all services..."
 echo ""
-echo "Сервисы:"
+echo "Services:"
 echo "  - Frontend (web):      http://localhost:4200"
 echo "  - API Gateway:         http://localhost:3000"
 echo "  - Auth Service:        http://localhost:3001"
 echo "  - Users Service:       http://localhost:3002"
 echo ""
-echo "Нажмите Ctrl+C для остановки всех сервисов"
+echo "Press Ctrl+C to stop all services"
 echo ""
 
 # Увеличиваем лимит файлов для macOS
@@ -20,7 +20,7 @@ ulimit -n 10240
 cd "$(dirname "$0")/.." || exit
 
 # Запускаем все сервисы параллельно через Nx
-echo "🚀 Запуск всех сервисов..."
+echo "Starting services..."
 npx nx run-many --target=serve --projects=apps,api-gateway,auth-service,users-service --parallel=4
 
 # Альтернатива: можно запустить через отдельные скрипты в фоне

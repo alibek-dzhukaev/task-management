@@ -2,7 +2,7 @@
 
 # Скрипт для запуска React приложения (Frontend)
 
-echo "🚀 Запуск React приложения (web)..."
+echo "Starting React application (web)..."
 echo "URL: http://localhost:4200"
 echo ""
 

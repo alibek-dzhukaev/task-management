@@ -72,7 +72,7 @@
       "options": {
         "targetName": "test"
       },
-      "exclude": ["apps/auth-service-e2e/**/*", "apps/users-service-e2e/**/*"]
+      "exclude": ["services/auth-service-e2e/**/*", "services/users-service-e2e/**/*"]
     }
   ],
   "targetDefaults": {

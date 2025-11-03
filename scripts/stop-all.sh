@@ -2,7 +2,7 @@
 
 # Скрипт для остановки ВСЕХ запущенных сервисов
 
-echo "🛑 Остановка всех сервисов..."
+echo "Stopping all services..."
 echo ""
 
 # Порты наших сервисов
@@ -12,12 +12,12 @@ for PORT in "${PORTS[@]}"; do
   PID=$(lsof -ti:$PORT 2>/dev/null)
   if [ -n "$PID" ]; then
     kill -9 "$PID" 2>/dev/null
-    echo "✅ Остановлен сервис на порту $PORT (PID: $PID)"
+    echo "Stopped service on port $PORT (PID: $PID)"
   else
-    echo "⚪ Порт $PORT свободен"
+    echo "Port $PORT is free"
   fi
 done
 
 echo ""
-echo "✅ Все сервисы остановлены!"
+echo "All services stopped!"
 

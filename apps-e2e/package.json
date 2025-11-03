@@ -1,10 +1,10 @@
 {
-  "name": "@nx-fullstack/apps-e2e",
+  "name": "@task-management/apps-e2e",
   "version": "0.0.1",
   "private": true,
   "nx": {
     "implicitDependencies": [
-      "@nx-fullstack/apps"
+      "@task-management/apps"
     ]
   }
 }

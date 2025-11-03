@@ -13,19 +13,22 @@
       "path": "./libs/shared/types"
     },
     {
-      "path": "./apps/auth-service-e2e"
+      "path": "./services/users-service-e2e"
     },
     {
-      "path": "./apps/auth-service"
+      "path": "./services/auth-service-e2e"
     },
     {
-      "path": "./apps/users-service-e2e"
+      "path": "./services/users-service"
     },
     {
-      "path": "./apps/users-service"
+      "path": "./services/auth-service"
     },
     {
-      "path": "./apps/api-gateway"
+      "path": "./services/api-gateway"
+    },
+    {
+      "path": "./apps/web"
     }
   ]
 }

@@ -9,7 +9,7 @@ export default defineConfig(() => ({
   //  plugins: [],
   // },
   test: {
-    name: '@nx-fullstack/shared-types',
+    name: '@task-management/shared-types',
     watch: false,
     globals: true,
     environment: 'node',

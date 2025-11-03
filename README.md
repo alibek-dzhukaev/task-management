@@ -1,6 +1,6 @@
-# Nx Fullstack Monorepo
+# Task Management
 
-Fullstack application with React frontend and Fastify microservices. Uses Nx monorepo for better code sharing and build optimization.
+Task management application built with React frontend and Fastify microservices. Uses Nx monorepo for better code sharing and build optimization.
 
 ## Quick Start
 
@@ -38,7 +38,7 @@ API Gateway (:3000)
     +---> Users Service (:3002)
 ```
 
-All services share TypeScript types from `@nx-fullstack/shared-types` library.
+All services share TypeScript types from `@task-management/shared-types` library.
 
 ## Tech Stack
 
@@ -64,7 +64,8 @@ All services share TypeScript types from `@nx-fullstack/shared-types` library.
 ```
 nx/
 ├── apps/
-│   ├── app/                 # React frontend
+│   └── web/                 # React frontend
+├── services/
 │   ├── api-gateway/         # Routes requests to services
 │   ├── auth-service/        # Authentication
 │   └── users-service/       # User CRUD
@@ -134,7 +135,7 @@ npx nx affected:build
 ### Generate new service
 
 ```bash
-npx nx g @nx/node:application my-service --directory=apps/my-service
+npx nx g @nx/node:application my-service --directory=services/my-service
 ```
 
 ### Generate new library
@@ -150,26 +151,3 @@ npx nx g @nx/js:library my-lib --directory=libs/my-lib
 ```bash
 npm run stop
 ```
-
-### "EMFILE: too many open files" (macOS)
-
-Add to `~/.zshrc`:
-
-```bash
-ulimit -n 10240
-```
-
-### Services not responding
-
-Check if all services are running:
-
-```bash
-lsof -ti:4200  # frontend
-lsof -ti:3000  # api-gateway
-lsof -ti:3001  # auth-service
-lsof -ti:3002  # users-service
-```
-
-## License
-
-MIT
