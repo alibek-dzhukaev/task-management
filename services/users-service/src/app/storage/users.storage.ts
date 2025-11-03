@@ -1,4 +1,4 @@
-import { prisma } from '@task-management/database';
+import { prisma, getPrismaReadReplica } from '@task-management/database';
 
 interface StoredUser {
   id: string;
@@ -10,18 +10,27 @@ interface StoredUser {
 }
 
 class UsersStorage {
+  // Read operations - use read replicas (load balanced)
   async findById(id: string): Promise<StoredUser | null> {
-    return prisma.user.findUnique({
+    const db = getPrismaReadReplica();
+    return db.user.findUnique({
       where: { id },
     });
   }
 
   async findByEmail(email: string): Promise<StoredUser | null> {
-    return prisma.user.findUnique({
+    const db = getPrismaReadReplica();
+    return db.user.findUnique({
       where: { email },
     });
   }
 
+  async getAllUsers(): Promise<StoredUser[]> {
+    const db = getPrismaReadReplica();
+    return db.user.findMany();
+  }
+
+  // Write operations - use master
   async updateUser(id: string, data: { email?: string; name?: string; password?: string }): Promise<StoredUser | null> {
     const user = await this.findById(id);
     if (!user) return null;
@@ -48,10 +57,6 @@ class UsersStorage {
     } catch {
       return false;
     }
-  }
-
-  async getAllUsers(): Promise<StoredUser[]> {
-    return prisma.user.findMany();
   }
 
   sanitizeUser(user: StoredUser): Omit<StoredUser, 'password'> {

@@ -10,11 +10,21 @@ Task management application built with React frontend and Fastify microservices.
 npm install
 ```
 
-### 2. Start Docker
+### 2. Start PostgreSQL (Master + 2 Replicas)
+
+Start databases:
 
 ```bash
-docker-compose up
+docker compose up -d
+
 ```
+
+This starts:
+- Master DB: `localhost:5432` (writes)
+- Replica 1: `localhost:5433` (reads)
+- Replica 2: `localhost:5434` (reads)
+
+Wait ~10 seconds for replicas to sync.
 
 ### 3. Run migrations
 
@@ -61,12 +71,24 @@ React Frontend (:4200)
     v
 API Gateway (:3000)
     |
-    +---> Auth Service (:3001)
-    +---> Users Service (:3002)
-          |
-          v
-    PostgreSQL Database
+    +---> Auth Service (:3001) ─┐
+    +---> Users Service (:3002) ─┤
+                                 │
+                    ┌────────────┴─────────────┐
+                    │                          │
+                    ▼                          ▼
+              Master DB (:5432)          Read Replicas
+              [Writes]                   [:5433, :5434]
+                    │                    [Reads - Load Balanced]
+                    └──────────┬─────────┘
+                              │
+                         Replication
 ```
+
+**Database Replication:**
+- Master handles all writes (CREATE, UPDATE, DELETE)
+- 2 Read replicas handle reads (SELECT) with round-robin load balancing
+- Automatic synchronization via PostgreSQL streaming replication
 
 All services share TypeScript types from `@task-management/shared-types` library.
 
@@ -82,7 +104,8 @@ All services share TypeScript types from `@task-management/shared-types` library
 - Fastify 5
 - TypeScript
 - JWT authentication
-- PostgreSQL + Prisma ORM
+- PostgreSQL 16 with Master-Replica replication
+- Prisma ORM with read replica load balancing
 
 **Tools:**
 - Nx monorepo
@@ -121,7 +144,6 @@ npm run dev:auth        # Auth Service only
 npm run dev:users       # Users Service only
 
 # Database
-npm run docker:db       # Start PostgreSQL in Docker
 npm run prisma:migrate  # Run database migrations
 npm run prisma:generate # Generate Prisma client
 npm run prisma:studio   # Open Prisma Studio (DB admin)
@@ -207,7 +229,27 @@ npm run prisma:studio
 ```bash
 docker compose down -v
 docker compose up -d
+# Wait 10 seconds for replicas to initialize
 npm run prisma:migrate
+```
+
+### Check replication status
+
+```bash
+docker exec -it task-management-db-master psql -U taskmanager -d task_management -c "SELECT * FROM pg_stat_replication;"
+```
+
+### Test data on all databases
+
+```bash
+# Master
+docker exec -it task-management-db-master psql -U taskmanager -d task_management -c "SELECT * FROM users;"
+
+# Replica 1
+docker exec -it task-management-db-replica-1 psql -U taskmanager -d task_management -c "SELECT * FROM users;"
+
+# Replica 2
+docker exec -it task-management-db-replica-2 psql -U taskmanager -d task_management -c "SELECT * FROM users;"
 ```
 
 ## Troubleshooting
@@ -226,10 +268,12 @@ Check if Docker is running:
 docker ps
 ```
 
-Should show `task-management-db` container. If not:
+Should show `task-management-db-master` container. If not:
 
 ```bash
-npm run docker:db
+docker compose up -d
+# or
+podman-compose up -d
 ```
 
 ### "EMFILE: too many open files" (macOS)

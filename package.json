@@ -16,7 +16,6 @@
     "build:gateway": "nx build api-gateway",
     "test": "nx test apps",
     "lint": "nx lint apps",
-    "docker:db": "./scripts/docker-db.sh",
     "prisma:migrate": "prisma migrate dev",
     "prisma:generate": "prisma generate",
     "prisma:studio": "prisma studio"
