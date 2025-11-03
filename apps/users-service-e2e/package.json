@@ -1,0 +1,26 @@
+{
+  "name": "@nx-fullstack/users-service-e2e",
+  "version": "0.0.1",
+  "private": true,
+  "nx": {
+    "implicitDependencies": [
+      "@nx-fullstack/users-service"
+    ],
+    "targets": {
+      "e2e": {
+        "executor": "@nx/jest:jest",
+        "outputs": [
+          "{projectRoot}/test-output/jest/coverage"
+        ],
+        "options": {
+          "jestConfig": "apps/users-service-e2e/jest.config.ts",
+          "passWithNoTests": true
+        },
+        "dependsOn": [
+          "@nx-fullstack/users-service:build",
+          "@nx-fullstack/users-service:serve"
+        ]
+      }
+    }
+  }
+}

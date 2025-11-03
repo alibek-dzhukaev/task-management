@@ -1,0 +1,166 @@
+import { FastifyInstance } from 'fastify';
+import type {
+  UpdateUserDto,
+  ApiResponse,
+  UserResponse,
+} from '@nx-fullstack/shared-types';
+import { HttpStatus } from '@nx-fullstack/shared-types';
+import { usersStorage } from '../storage/users.storage';
+
+export default async function (fastify: FastifyInstance) {
+  fastify.get('/users', async (request, reply) => {
+    const users = usersStorage.getAllUsers();
+    
+    const sanitizedUsers: UserResponse[] = users.map(user => ({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      createdAt: user.createdAt.toISOString(),
+      updatedAt: user.updatedAt.toISOString(),
+    }));
+
+    const response: ApiResponse<UserResponse[]> = {
+      success: true,
+      data: sanitizedUsers,
+    };
+
+    return reply.code(HttpStatus.OK).send(response);
+  });
+
+  fastify.get<{ Params: { id: string } }>('/users/:id', async (request, reply) => {
+    const { id } = request.params;
+
+    const user = usersStorage.findById(id);
+    if (!user) {
+      const response: ApiResponse = {
+        success: false,
+        error: {
+          code: 'USER_NOT_FOUND',
+          message: 'User not found',
+        },
+      };
+      return reply.code(HttpStatus.NOT_FOUND).send(response);
+    }
+
+    const userResponse: UserResponse = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      createdAt: user.createdAt.toISOString(),
+      updatedAt: user.updatedAt.toISOString(),
+    };
+
+    const response: ApiResponse<UserResponse> = {
+      success: true,
+      data: userResponse,
+    };
+
+    return reply.code(HttpStatus.OK).send(response);
+  });
+
+  fastify.put<{ Params: { id: string }; Body: UpdateUserDto }>(
+    '/users/:id',
+    async (request, reply) => {
+      const { id } = request.params;
+      const updateData = request.body;
+
+      if (!updateData.email && !updateData.name && !updateData.password) {
+        const response: ApiResponse = {
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'At least one field (email, name, or password) must be provided',
+          },
+        };
+        return reply.code(HttpStatus.BAD_REQUEST).send(response);
+      }
+
+      if (updateData.email && !updateData.email.includes('@')) {
+        const response: ApiResponse = {
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'Invalid email format',
+          },
+        };
+        return reply.code(HttpStatus.BAD_REQUEST).send(response);
+      }
+
+      try {
+        const updatedUser = usersStorage.updateUser(id, updateData);
+        
+        if (!updatedUser) {
+          const response: ApiResponse = {
+            success: false,
+            error: {
+              code: 'USER_NOT_FOUND',
+              message: 'User not found',
+            },
+          };
+          return reply.code(HttpStatus.NOT_FOUND).send(response);
+        }
+
+        const userResponse: UserResponse = {
+          id: updatedUser.id,
+          email: updatedUser.email,
+          name: updatedUser.name,
+          createdAt: updatedUser.createdAt.toISOString(),
+          updatedAt: updatedUser.updatedAt.toISOString(),
+        };
+
+        const response: ApiResponse<UserResponse> = {
+          success: true,
+          data: userResponse,
+          message: 'User updated successfully',
+        };
+
+        return reply.code(HttpStatus.OK).send(response);
+      } catch (error) {
+        if (error instanceof Error && error.message === 'Email already exists') {
+          const response: ApiResponse = {
+            success: false,
+            error: {
+              code: 'EMAIL_EXISTS',
+              message: 'User with this email already exists',
+            },
+          };
+          return reply.code(HttpStatus.BAD_REQUEST).send(response);
+        }
+        throw error;
+      }
+    }
+  );
+
+  fastify.delete<{ Params: { id: string } }>('/users/:id', async (request, reply) => {
+    const { id } = request.params;
+
+    const deleted = usersStorage.deleteUser(id);
+    
+    if (!deleted) {
+      const response: ApiResponse = {
+        success: false,
+        error: {
+          code: 'USER_NOT_FOUND',
+          message: 'User not found',
+        },
+      };
+      return reply.code(HttpStatus.NOT_FOUND).send(response);
+    }
+
+    const response: ApiResponse = {
+      success: true,
+      message: 'User deleted successfully',
+    };
+
+    return reply.code(HttpStatus.OK).send(response);
+  });
+
+  fastify.get('/health', async () => {
+    return {
+      status: 'ok',
+      service: 'users-service',
+      timestamp: new Date().toISOString(),
+    };
+  });
+}
+
