@@ -8,6 +8,7 @@ import type {
 import { HttpStatus } from '@task-management/shared-types';
 import { usersStorage } from '../storage/users.storage';
 import { generateToken } from '../utils/jwt.utils';
+import { publishEvent, QueueNames } from '@task-management/messaging';
 
 export default async function (fastify: FastifyInstance) {
   fastify.post<{ Body: LoginDto }>('/login', async (request, reply) => {
@@ -107,6 +108,14 @@ export default async function (fastify: FastifyInstance) {
     try {
       const user = await usersStorage.createUser({ email, password, name });
       const token = generateToken(user.id, user.email);
+
+      await publishEvent(QueueNames.USER_REGISTERED, {
+        type: 'user.registered',
+        userId: user.id,
+        email: user.email,
+        name: user.name,
+        timestamp: new Date(),
+      });
 
       const authResponse: AuthResponse = {
         accessToken: token,

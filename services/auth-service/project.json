@@ -17,7 +17,7 @@
         "format": ["cjs"],
         "platform": "node",
         "target": "node18",
-        "external": ["@prisma/client", "ioredis"]
+        "external": ["@prisma/client", "ioredis", "amqplib"]
       }
     }
   }

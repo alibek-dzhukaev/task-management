@@ -7,6 +7,7 @@ import type {
 import { HttpStatus } from '@task-management/shared-types';
 import { usersStorage } from '../storage/users.storage';
 import { cache } from '@task-management/cache';
+import { publishEvent, QueueNames } from '@task-management/messaging';
 
 export default async function (fastify: FastifyInstance) {
   fastify.get('/users', async (request, reply) => {
@@ -132,6 +133,16 @@ export default async function (fastify: FastifyInstance) {
         await cache.del(`user:${id}`);
         await cache.del('users:all');
 
+        await publishEvent(QueueNames.USER_UPDATED, {
+          type: 'user.updated',
+          userId: updatedUser.id,
+          changes: {
+            email: updateData.email,
+            name: updateData.name,
+          },
+          timestamp: new Date(),
+        });
+
         const userResponse: UserResponse = {
           id: updatedUser.id,
           email: updatedUser.email,
@@ -166,9 +177,9 @@ export default async function (fastify: FastifyInstance) {
   fastify.delete<{ Params: { id: string } }>('/users/:id', async (request, reply) => {
     const { id } = request.params;
 
-    const deleted = await usersStorage.deleteUser(id);
+    const user = await usersStorage.findById(id);
     
-    if (!deleted) {
+    if (!user) {
       const response: ApiResponse = {
         success: false,
         error: {
@@ -179,8 +190,28 @@ export default async function (fastify: FastifyInstance) {
       return reply.code(HttpStatus.NOT_FOUND).send(response);
     }
 
+    const deleted = await usersStorage.deleteUser(id);
+    
+    if (!deleted) {
+      const response: ApiResponse = {
+        success: false,
+        error: {
+          code: 'DELETE_FAILED',
+          message: 'Failed to delete user',
+        },
+      };
+      return reply.code(HttpStatus.INTERNAL_SERVER_ERROR).send(response);
+    }
+
     await cache.del(`user:${id}`);
     await cache.del('users:all');
+
+    await publishEvent(QueueNames.USER_DELETED, {
+      type: 'user.deleted',
+      userId: user.id,
+      email: user.email,
+      timestamp: new Date(),
+    });
 
     const response: ApiResponse = {
       success: true,

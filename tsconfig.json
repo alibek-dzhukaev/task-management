@@ -35,6 +35,9 @@
     },
     {
       "path": "./libs/shared/cache"
+    },
+    {
+      "path": "./libs/shared/messaging"
     }
   ]
 }

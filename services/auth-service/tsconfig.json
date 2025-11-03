@@ -7,6 +7,9 @@
       "path": "../../libs/shared/database"
     },
     {
+      "path": "../../libs/shared/messaging"
+    },
+    {
       "path": "../../libs/shared/types"
     },
     {

@@ -14,19 +14,24 @@
     "paths": {
       "@task-management/shared-types": ["../../libs/shared/types/src/index.ts"],
       "@task-management/database": ["../../libs/shared/database/src/index.ts"],
-      "@task-management/cache": ["../../libs/shared/cache/src/index.ts"]
+      "@task-management/cache": ["../../libs/shared/cache/src/index.ts"],
+      "@task-management/messaging": ["../../libs/shared/messaging/src/index.ts"]
     }
   },
   "include": [
     "src/**/*.ts",
     "../../libs/shared/types/src/**/*.ts",
     "../../libs/shared/database/src/**/*.ts",
-    "../../libs/shared/cache/src/**/*.ts"
+    "../../libs/shared/cache/src/**/*.ts",
+    "../../libs/shared/messaging/src/**/*.ts"
   ],
   "exclude": ["src/**/*.spec.ts", "src/**/*.test.ts"],
   "references": [
     {
       "path": "../../libs/shared/database"
+    },
+    {
+      "path": "../../libs/shared/messaging/tsconfig.lib.json"
     },
     {
       "path": "../../libs/shared/cache/tsconfig.lib.json"

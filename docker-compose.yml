@@ -200,6 +200,28 @@ services:
       - redis-master
       - redis-replica
 
+  # RabbitMQ - Message Broker
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: task-management-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-taskrabbit}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-rabbit_dev_password}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-/}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - postgres-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 networks:
   postgres-network:
     driver: bridge
@@ -215,4 +237,6 @@ volumes:
     name: task-management-redis-master-data
   redis_replica_data:
     name: task-management-redis-replica-data
+  rabbitmq_data:
+    name: task-management-rabbitmq-data
 

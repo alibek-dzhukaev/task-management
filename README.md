@@ -26,6 +26,8 @@ This starts:
 - Redis Master: `localhost:6379` (cache writes)
 - Redis Replica: `localhost:6380` (cache reads)
 - Sentinels: `localhost:26379-26381` (monitoring)
+- RabbitMQ: `localhost:5672` (message broker)
+- RabbitMQ UI: `localhost:15672` (management)
 
 Wait ~15 seconds for replicas and sentinels to sync.
 
@@ -61,6 +63,7 @@ This starts:
 - API Gateway: http://localhost:3000
 - Auth Service: http://localhost:3001
 - Users Service: http://localhost:3002
+- Email Worker: (background service)
 
 Login with:
 - Email: `admin@test.com`
@@ -74,10 +77,23 @@ React Frontend (:4200)
     v
 API Gateway (:3000)
     |
-    +---> Auth Service (:3001) ─┐
-    +---> Users Service (:3002) ─┤
-              |                  │
-              v                  │
+    +---> Auth Service (:3001) ────┐
+    +---> Users Service (:3002) ───┤
+              |                    │
+              v                    v
+    ┌──────────────────────────────────────────┐
+    │         RabbitMQ (:5672)                 │
+    │   Management UI: :15672                  │
+    │   Queues:                                │
+    │   • user.registered ──┐                  │
+    │   • user.updated ─────┤                  │
+    │   • user.deleted ─────┤                  │
+    └───────────────────────┼──────────────────┘
+                            │
+                            v
+                   Email Worker (:3003)
+                   [Sends notifications]
+    
     ┌─────────────────┐       ┌──┴──────────────────┐
     │ Redis Sentinel  │       │                     │
     │ [:26379-26381]  │       ▼                     ▼
@@ -95,6 +111,8 @@ API Gateway (:3000)
 - **Redis Sentinel:** Master + replica with 3 sentinels for automatic failover
 - **Caching:** 5-minute TTL for user data, reduces DB load by ~80%
 - **Load Balancing:** Round-robin across DB replicas
+- **Message Queue:** RabbitMQ for async event processing
+- **Event-Driven:** Services communicate via domain events
 
 All services share TypeScript types from `@task-management/shared-types` library.
 
@@ -113,6 +131,8 @@ All services share TypeScript types from `@task-management/shared-types` library
 - PostgreSQL 16 with Master-Replica replication
 - Prisma ORM with read replica load balancing
 - Redis 7 for caching and sessions
+- RabbitMQ 3.13 for message queuing
+- Nodemailer for email notifications
 
 **Tools:**
 - Nx monorepo
@@ -129,12 +149,14 @@ nx/
 ├── services/
 │   ├── api-gateway/         # Routes requests to services
 │   ├── auth-service/        # Authentication
-│   └── users-service/       # User CRUD + caching
+│   ├── users-service/       # User CRUD + caching
+│   └── email-worker/        # Email notifications (background)
 ├── libs/
 │   └── shared/
 │       ├── types/           # Shared TypeScript types
 │       ├── database/        # Prisma client (master + replicas)
-│       └── cache/           # Redis client
+│       ├── cache/           # Redis client
+│       └── messaging/       # RabbitMQ client
 ├── prisma/
 │   └── schema.prisma        # Database schema
 └── scripts/                 # Helper scripts
@@ -144,13 +166,14 @@ nx/
 
 ```bash
 # Development
-npm run dev:all         # Start all services
-npm run stop            # Stop all services
+npm run dev:all          # Start all services
+npm run stop             # Stop all services
 
-npm run dev             # Frontend only
-npm run dev:gateway     # API Gateway only
-npm run dev:auth        # Auth Service only
-npm run dev:users       # Users Service only
+npm run dev              # Frontend only
+npm run dev:gateway      # API Gateway only
+npm run dev:auth         # Auth Service only
+npm run dev:users        # Users Service only
+npm run dev:email-worker # Email Worker only
 
 # Database
 npm run prisma:migrate  # Run database migrations
@@ -158,12 +181,13 @@ npm run prisma:generate # Generate Prisma client
 npm run prisma:studio   # Open Prisma Studio (DB admin)
 
 # Build & Test
-npm run build           # Build all projects
-npm run build:auth      # Build auth-service only
-npm run build:users     # Build users-service only
-npm run build:gateway   # Build api-gateway only
-npm run test            # Test all
-npm run lint            # Lint all
+npm run build            # Build all projects
+npm run build:auth       # Build auth-service only
+npm run build:users      # Build users-service only
+npm run build:gateway    # Build api-gateway only
+npm run build:email-worker # Build email-worker only
+npm run test             # Test all
+npm run lint             # Lint all
 
 # Build output:
 # - Microservices: dist/services/*/main.js (~4KB each)
@@ -188,6 +212,46 @@ GET    /users/users/:id - Get user by ID
 PUT    /users/users/:id - Update user
 DELETE /users/users/:id - Delete user
 GET    /users/health    - Health check
+```
+
+## Events & Messaging
+
+The application uses RabbitMQ for event-driven communication between services.
+
+### Domain Events
+
+| Event | Queue | Trigger | Consumer | Action |
+|-------|-------|---------|----------|--------|
+| `user.registered` | user.registered | User registers via Auth Service | Email Worker | Send welcome email |
+| `user.created` | user.created | User created manually | Email Worker | Send welcome email |
+| `user.updated` | user.updated | User profile updated | Email Worker | Send update notification |
+| `user.deleted` | user.deleted | User deleted | Email Worker | Send goodbye email |
+
+### Event Flow Example
+
+```
+User Registration:
+1. POST /auth/register
+2. Auth Service creates user in DB
+3. Auth Service publishes user.registered event
+4. RabbitMQ queues the event
+5. Email Worker consumes event
+6. Email Worker sends welcome email
+```
+
+### Email Configuration
+
+For development, emails are logged to console. To use real SMTP:
+
+```bash
+# Add to .env
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=your-email@gmail.com
+SMTP_PASSWORD=your-app-password
+SMTP_FROM="Task Management <noreply@taskmanagement.com>"
+NODE_ENV=production
 ```
 
 ## Development
@@ -272,6 +336,25 @@ GET user:<user-id>
 
 # Clear all cache
 FLUSHALL
+```
+
+### Check RabbitMQ
+
+Access RabbitMQ Management UI: http://localhost:15672
+- Username: `taskrabbit`
+- Password: `rabbit_dev_password`
+
+CLI commands:
+
+```bash
+# List queues
+docker exec -it task-management-rabbitmq rabbitmqctl list_queues
+
+# List connections
+docker exec -it task-management-rabbitmq rabbitmqctl list_connections
+
+# Check queue messages
+docker exec -it task-management-rabbitmq rabbitmqctl list_queues name messages
 ```
 
 ### Check Sentinel status

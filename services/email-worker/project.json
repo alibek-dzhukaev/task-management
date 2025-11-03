@@ -1,0 +1,45 @@
+{
+  "name": "email-worker",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "services/email-worker/src",
+  "projectType": "application",
+  "tags": [],
+  "targets": {
+    "build": {
+      "executor": "@nx/esbuild:esbuild",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/services/email-worker",
+        "main": "services/email-worker/src/main.ts",
+        "tsConfig": "services/email-worker/tsconfig.build.json",
+        "assets": [],
+        "bundle": true,
+        "format": ["cjs"],
+        "platform": "node",
+        "target": "node18",
+        "external": ["amqplib", "nodemailer"]
+      }
+    },
+    "serve": {
+      "executor": "@nx/js:node",
+      "defaultConfiguration": "development",
+      "options": {
+        "buildTarget": "email-worker:build"
+      },
+      "configurations": {
+        "development": {
+          "buildTarget": "email-worker:build:development",
+          "inspect": "inspect"
+        },
+        "production": {
+          "buildTarget": "email-worker:build:production"
+        }
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": ["{options.outputFile}"]
+    }
+  }
+}
+
