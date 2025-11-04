@@ -28,8 +28,8 @@ This starts:
 - Sentinels: `localhost:26379-26381` (monitoring)
 - RabbitMQ: `localhost:5672` (message broker)
 - RabbitMQ UI: `localhost:15672` (management)
-- **Prometheus: `localhost:9090` (metrics collection)**
-- **Grafana: `localhost:3001` (metrics visualization)**
+- Prometheus: `localhost:9090` (metrics collection)
+- Grafana: `localhost:3001` (metrics visualization)
 
 Wait ~15 seconds for replicas and sentinels to sync.
 
@@ -110,26 +110,26 @@ API Gateway (:3000)
        [5 min TTL Cache]
 ```
 
-**Infrastructure:**
-- **Database Replication:** Master + 2 read replicas with automatic failover
-- **Redis Sentinel:** Master + replica with 3 sentinels for automatic failover
-- **Caching:** 5-minute TTL for user data, reduces DB load by ~80%
-- **Load Balancing:** Round-robin across DB replicas
-- **Message Queue:** RabbitMQ for async event processing
-- **Event-Driven:** Services communicate via domain events
-- **Monitoring:** Prometheus + Grafana for real-time metrics and visualization
+Infrastructure features:
+- Database Replication: Master + 2 read replicas with automatic failover
+- Redis Sentinel: Master + replica with 3 sentinels for automatic failover
+- Caching: 5-minute TTL for user data, reduces DB load by ~80%
+- Load Balancing: Round-robin across DB replicas
+- Message Queue: RabbitMQ for async event processing
+- Event-Driven: Services communicate via domain events
+- Monitoring: Prometheus + Grafana for real-time metrics and visualization
 
 All services share TypeScript types from `@task-management/shared-types` library.
 
 ## Tech Stack
 
-**Frontend:**
+Frontend:
 - React 19
 - Vite 7
 - React Router 7
 - TypeScript
 
-**Backend:**
+Backend:
 - Fastify 5
 - TypeScript
 - JWT authentication
@@ -139,12 +139,12 @@ All services share TypeScript types from `@task-management/shared-types` library
 - RabbitMQ 3.13 for message queuing
 - Nodemailer for email notifications
 
-**Monitoring:**
+Monitoring:
 - Prometheus 2.48 (metrics collection)
 - Grafana 10.2 (visualization)
 - prom-client (Node.js metrics)
 
-**Tools:**
+Tools:
 - Nx monorepo
 - Docker Compose
 - ESLint
@@ -399,7 +399,7 @@ docker stop task-management-redis-master
 # Watch logs - Sentinel will promote replica
 docker logs -f task-management-redis-sentinel-1
 
-# App continues working! New master on port 6380
+# App continues working with new master on port 6380
 
 # Restart old master - becomes replica
 docker start task-management-redis-master
@@ -422,49 +422,47 @@ docker exec -it task-management-db-replica-2 psql -U taskmanager -d task_managem
 
 The application includes full monitoring setup with Prometheus (metrics collection) and Grafana (visualization).
 
-### Quick Access
+### Access URLs
 
-- **Prometheus:** http://localhost:9090
-- **Grafana:** http://localhost:3001
-  - Username: `admin`
-  - Password: `admin`
+- Prometheus: http://localhost:9090
+- Grafana: http://localhost:3001 (admin/admin)
 
-### What's Monitored
+### Monitored Metrics
 
 All services expose `/metrics` endpoint with:
 
-1. **HTTP Metrics:**
-   - Request rate (requests/second)
-   - Response time (P50, P95, P99)
-   - Error rate (4xx, 5xx)
-   - Active connections
+HTTP Metrics:
+- Request rate (requests/second)
+- Response time (P50, P95, P99)
+- Error rate (4xx, 5xx)
+- Active connections
 
-2. **Node.js Metrics:**
-   - Memory usage (heap, external)
-   - CPU usage
-   - Event loop lag
-   - Garbage collection
+Node.js Metrics:
+- Memory usage (heap, external)
+- CPU usage
+- Event loop lag
+- Garbage collection
 
-3. **Custom Metrics:**
-   - Cache hit/miss rate
-   - Database queries
-   - Queue message processing
+Custom Metrics:
+- Cache hit/miss rate
+- Database queries
+- Queue message processing
 
 ### Grafana Dashboards
 
-Pre-configured dashboard: **Task Management System - Overview**
+Pre-configured dashboard: Task Management System - Overview
 
-Shows:
-- 📊 Total requests/sec across all services
-- 🚨 Error rate (5xx responses)
-- ⏱️ P95 latency by service
-- 🟢 Service health status
-- 📈 Request rate by service (graph)
-- 🕐 Response time percentiles (P50, P95)
-- 📊 HTTP status codes (2xx, 4xx, 5xx)
-- 💾 Memory usage by service
+Metrics displayed:
+- Total requests/sec across all services
+- Error rate (5xx responses)
+- P95 latency by service
+- Service health status
+- Request rate by service (graph)
+- Response time percentiles (P50, P95)
+- HTTP status codes (2xx, 4xx, 5xx)
+- Memory usage by service
 
-**Dashboard auto-refreshes every 5 seconds.**
+Dashboard auto-refreshes every 5 seconds.
 
 ### Check Metrics from CLI
 
@@ -541,7 +539,7 @@ groups:
 
 ### Monitoring Configuration
 
-**Prometheus scrapes metrics every 15 seconds from:**
+Prometheus scrapes metrics every 15 seconds from:
 - API Gateway: `host.docker.internal:3000/metrics`
 - Auth Service: `host.docker.internal:3002/metrics`
 - Users Service: `host.docker.internal:3003/metrics`
@@ -549,13 +547,14 @@ groups:
 
 Configuration: `monitoring/prometheus/prometheus.yml`
 
-**Grafana provisioning:**
+Grafana provisioning:
 - Datasources: `monitoring/grafana/provisioning/datasources/`
 - Dashboards: `monitoring/grafana/dashboards/`
 
 ### Troubleshooting Monitoring
 
-**Prometheus shows "DOWN" for services:**
+If Prometheus shows services as DOWN:
+
 ```bash
 # Make sure all services are running
 npm run dev:all
@@ -567,12 +566,13 @@ curl http://localhost:3003/metrics
 curl http://localhost:3005/metrics
 ```
 
-**Grafana dashboard shows "No Data":**
+If Grafana dashboard shows "No Data":
 1. Check Prometheus is collecting data: http://localhost:9090/targets
 2. All targets should be "UP" (green)
 3. If "DOWN", restart services: `npm run dev:all`
 
-**Can't access Grafana:**
+If Grafana is not accessible:
+
 ```bash
 # Check if Grafana is running
 docker ps | grep grafana
