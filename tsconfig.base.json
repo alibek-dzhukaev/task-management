@@ -22,7 +22,8 @@
       "@task-management/shared-types": ["libs/shared/types/src/index.ts"],
       "@task-management/database": ["libs/shared/database/src/index.ts"],
       "@task-management/cache": ["libs/shared/cache/src/index.ts"],
-      "@task-management/messaging": ["libs/shared/messaging/src/index.ts"]
+      "@task-management/messaging": ["libs/shared/messaging/src/index.ts"],
+      "@task-management/metrics": ["libs/shared/metrics/src/index.ts"]
     }
   }
 }

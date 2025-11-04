@@ -1,0 +1,73 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'task-management'
+    environment: 'development'
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+        labels:
+          service: 'prometheus'
+
+  - job_name: 'api-gateway'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['host.docker.internal:3000']
+        labels:
+          service: 'api-gateway'
+          tier: 'gateway'
+
+  - job_name: 'auth-service'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['host.docker.internal:3002']
+        labels:
+          service: 'auth-service'
+          tier: 'backend'
+
+  - job_name: 'users-service'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['host.docker.internal:3003']
+        labels:
+          service: 'users-service'
+          tier: 'backend'
+
+  - job_name: 'email-worker'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['host.docker.internal:3005']
+        labels:
+          service: 'email-worker'
+          tier: 'worker'
+
+  - job_name: 'postgres-master'
+    static_configs:
+      - targets: ['postgres-master:5432']
+        labels:
+          service: 'postgres'
+          role: 'master'
+
+  - job_name: 'redis-master'
+    static_configs:
+      - targets: ['redis-master:6379']
+        labels:
+          service: 'redis'
+          role: 'master'
+
+  - job_name: 'rabbitmq'
+    static_configs:
+      - targets: ['rabbitmq:15672']
+        labels:
+          service: 'rabbitmq'
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+
+rule_files: []
+

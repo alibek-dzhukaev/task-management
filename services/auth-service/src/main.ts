@@ -1,13 +1,17 @@
 import Fastify from 'fastify';
 import { app } from './app/app';
+import { registerMetrics } from '@task-management/metrics';
 
 const host = process.env.HOST ?? 'localhost';
-const port = process.env.PORT ? Number(process.env.PORT) : 3001;
+const port = process.env.PORT ? Number(process.env.PORT) : 3002;
 
 // Instantiate Fastify with some config
 const server = Fastify({
   logger: true,
 });
+
+// Register metrics
+registerMetrics(server, { serviceName: 'auth-service' });
 
 // Register your application as a normal plugin.
 server.register(app);

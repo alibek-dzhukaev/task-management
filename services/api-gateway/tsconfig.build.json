@@ -12,16 +12,19 @@
     "resolveJsonModule": true,
     "baseUrl": ".",
     "paths": {
-      "@task-management/shared-types": ["../../libs/shared/types/src/index.ts"]
+      "@task-management/shared-types": ["../../libs/shared/types/src/index.ts"],
+      "@task-management/metrics": ["../../libs/shared/metrics/src/index.ts"]
     }
   },
   "include": [
     "src/**/*.ts",
-    "../../libs/shared/types/src/**/*.ts"
+    "../../libs/shared/types/src/**/*.ts",
+    "../../libs/shared/metrics/src/**/*.ts"
   ],
-  "exclude": [
-    "src/**/*.spec.ts",
-    "src/**/*.test.ts"
+  "exclude": ["src/**/*.spec.ts", "src/**/*.test.ts"],
+  "references": [
+    {
+      "path": "../../libs/shared/metrics"
+    }
   ]
 }
-

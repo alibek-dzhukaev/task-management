@@ -28,6 +28,8 @@ This starts:
 - Sentinels: `localhost:26379-26381` (monitoring)
 - RabbitMQ: `localhost:5672` (message broker)
 - RabbitMQ UI: `localhost:15672` (management)
+- **Prometheus: `localhost:9090` (metrics collection)**
+- **Grafana: `localhost:3001` (metrics visualization)**
 
 Wait ~15 seconds for replicas and sentinels to sync.
 
@@ -61,9 +63,11 @@ npm run dev:all
 This starts:
 - Frontend: http://localhost:4200
 - API Gateway: http://localhost:3000
-- Auth Service: http://localhost:3001
-- Users Service: http://localhost:3002
-- Email Worker: (background service)
+- Auth Service: http://localhost:3002
+- Users Service: http://localhost:3003
+- Email Worker: http://localhost:3005 (background + metrics)
+
+Each service exposes metrics at `/metrics` endpoint.
 
 Login with:
 - Email: `admin@test.com`
@@ -113,6 +117,7 @@ API Gateway (:3000)
 - **Load Balancing:** Round-robin across DB replicas
 - **Message Queue:** RabbitMQ for async event processing
 - **Event-Driven:** Services communicate via domain events
+- **Monitoring:** Prometheus + Grafana for real-time metrics and visualization
 
 All services share TypeScript types from `@task-management/shared-types` library.
 
@@ -133,6 +138,11 @@ All services share TypeScript types from `@task-management/shared-types` library
 - Redis 7 for caching and sessions
 - RabbitMQ 3.13 for message queuing
 - Nodemailer for email notifications
+
+**Monitoring:**
+- Prometheus 2.48 (metrics collection)
+- Grafana 10.2 (visualization)
+- prom-client (Node.js metrics)
 
 **Tools:**
 - Nx monorepo
@@ -156,7 +166,11 @@ nx/
 │       ├── types/           # Shared TypeScript types
 │       ├── database/        # Prisma client (master + replicas)
 │       ├── cache/           # Redis client
-│       └── messaging/       # RabbitMQ client
+│       ├── messaging/       # RabbitMQ client
+│       └── metrics/         # Prometheus metrics
+├── monitoring/
+│   ├── prometheus/          # Prometheus config
+│   └── grafana/             # Grafana dashboards
 ├── prisma/
 │   └── schema.prisma        # Database schema
 └── scripts/                 # Helper scripts
@@ -402,6 +416,172 @@ docker exec -it task-management-db-replica-1 psql -U taskmanager -d task_managem
 
 # Replica 2
 docker exec -it task-management-db-replica-2 psql -U taskmanager -d task_management -c "SELECT * FROM users;"
+```
+
+## Monitoring with Prometheus & Grafana
+
+The application includes full monitoring setup with Prometheus (metrics collection) and Grafana (visualization).
+
+### Quick Access
+
+- **Prometheus:** http://localhost:9090
+- **Grafana:** http://localhost:3001
+  - Username: `admin`
+  - Password: `admin`
+
+### What's Monitored
+
+All services expose `/metrics` endpoint with:
+
+1. **HTTP Metrics:**
+   - Request rate (requests/second)
+   - Response time (P50, P95, P99)
+   - Error rate (4xx, 5xx)
+   - Active connections
+
+2. **Node.js Metrics:**
+   - Memory usage (heap, external)
+   - CPU usage
+   - Event loop lag
+   - Garbage collection
+
+3. **Custom Metrics:**
+   - Cache hit/miss rate
+   - Database queries
+   - Queue message processing
+
+### Grafana Dashboards
+
+Pre-configured dashboard: **Task Management System - Overview**
+
+Shows:
+- 📊 Total requests/sec across all services
+- 🚨 Error rate (5xx responses)
+- ⏱️ P95 latency by service
+- 🟢 Service health status
+- 📈 Request rate by service (graph)
+- 🕐 Response time percentiles (P50, P95)
+- 📊 HTTP status codes (2xx, 4xx, 5xx)
+- 💾 Memory usage by service
+
+**Dashboard auto-refreshes every 5 seconds.**
+
+### Check Metrics from CLI
+
+```bash
+# API Gateway metrics
+curl http://localhost:3000/metrics
+
+# Auth Service metrics
+curl http://localhost:3002/metrics
+
+# Users Service metrics
+curl http://localhost:3003/metrics
+
+# Email Worker metrics
+curl http://localhost:3005/metrics
+```
+
+### Prometheus Queries (Examples)
+
+Open http://localhost:9090 and try:
+
+```promql
+# Total request rate
+sum(rate(http_requests_total[1m]))
+
+# Error rate by service
+sum(rate(http_requests_total{status=~"5.."}[5m])) by (service)
+
+# P95 latency
+histogram_quantile(0.95, sum(rate(http_request_duration_ms_bucket[5m])) by (le, service))
+
+# Memory usage
+nodejs_heap_size_used_bytes
+
+# Active connections
+http_active_connections
+```
+
+### Create Custom Dashboard
+
+1. Open Grafana: http://localhost:3001
+2. Click **+ Create** → **Dashboard**
+3. Add panel → Select **Prometheus** datasource
+4. Enter query (examples above)
+5. Choose visualization (Time series, Gauge, Stat)
+6. Save dashboard
+
+### Alerts (Optional)
+
+Add to `monitoring/prometheus/alerts.yml`:
+
+```yaml
+groups:
+  - name: service_alerts
+    rules:
+      - alert: HighErrorRate
+        expr: sum(rate(http_requests_total{status=~"5.."}[5m])) / sum(rate(http_requests_total[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is above 5%"
+      
+      - alert: HighLatency
+        expr: histogram_quantile(0.95, sum(rate(http_request_duration_ms_bucket[5m])) by (le)) > 1000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High latency detected"
+          description: "P95 latency is above 1000ms"
+```
+
+### Monitoring Configuration
+
+**Prometheus scrapes metrics every 15 seconds from:**
+- API Gateway: `host.docker.internal:3000/metrics`
+- Auth Service: `host.docker.internal:3002/metrics`
+- Users Service: `host.docker.internal:3003/metrics`
+- Email Worker: `host.docker.internal:3005/metrics`
+
+Configuration: `monitoring/prometheus/prometheus.yml`
+
+**Grafana provisioning:**
+- Datasources: `monitoring/grafana/provisioning/datasources/`
+- Dashboards: `monitoring/grafana/dashboards/`
+
+### Troubleshooting Monitoring
+
+**Prometheus shows "DOWN" for services:**
+```bash
+# Make sure all services are running
+npm run dev:all
+
+# Check if metrics endpoints respond
+curl http://localhost:3000/metrics
+curl http://localhost:3002/metrics
+curl http://localhost:3003/metrics
+curl http://localhost:3005/metrics
+```
+
+**Grafana dashboard shows "No Data":**
+1. Check Prometheus is collecting data: http://localhost:9090/targets
+2. All targets should be "UP" (green)
+3. If "DOWN", restart services: `npm run dev:all`
+
+**Can't access Grafana:**
+```bash
+# Check if Grafana is running
+docker ps | grep grafana
+
+# Check logs
+docker logs task-management-grafana
+
+# Restart
+docker compose restart grafana
 ```
 
 ## Troubleshooting

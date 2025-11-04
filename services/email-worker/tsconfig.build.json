@@ -12,16 +12,26 @@
     "resolveJsonModule": true,
     "baseUrl": ".",
     "paths": {
-      "@task-management/messaging": ["../../libs/shared/messaging/src/index.ts"]
+      "@task-management/messaging": ["../../libs/shared/messaging/src/index.ts"],
+      "@task-management/metrics": ["../../libs/shared/metrics/src/index.ts"]
     }
   },
   "include": [
     "src/**/*.ts",
-    "../../libs/shared/messaging/src/**/*.ts"
+    "../../libs/shared/messaging/src/**/*.ts",
+    "../../libs/shared/metrics/src/**/*.ts"
   ],
   "exclude": [
     "src/**/*.spec.ts",
     "src/**/*.test.ts"
+  ],
+  "references": [
+    {
+      "path": "../../libs/shared/metrics"
+    },
+    {
+      "path": "../../libs/shared/messaging/tsconfig.lib.json"
+    }
   ]
 }
 

@@ -1,14 +1,30 @@
 import { consumeQueue, QueueNames, rabbitMQClient } from '@task-management/messaging';
 import { handleUserEvent } from './app/handlers/user-events.handler';
+import Fastify from 'fastify';
+import { registerMetrics } from '@task-management/metrics';
 
 const host = process.env.HOST ?? 'localhost';
-const port = process.env.PORT ? Number(process.env.PORT) : 3003;
+const port = process.env.PORT ? Number(process.env.PORT) : 3005;
 
 async function startWorker() {
   console.log('Starting Email Worker...');
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 
   try {
+    const server = Fastify({ logger: true });
+    registerMetrics(server, { serviceName: 'email-worker' });
+
+    server.get('/health', async () => {
+      return {
+        status: 'ok',
+        service: 'email-worker',
+        timestamp: new Date().toISOString(),
+      };
+    });
+
+    await server.listen({ port, host });
+    console.log(`Metrics endpoint: http://${host}:${port}/metrics`);
+
     await rabbitMQClient.connect();
 
     await consumeQueue(QueueNames.USER_REGISTERED, handleUserEvent);
@@ -16,7 +32,7 @@ async function startWorker() {
     await consumeQueue(QueueNames.USER_UPDATED, handleUserEvent);
     await consumeQueue(QueueNames.USER_DELETED, handleUserEvent);
 
-    console.log(`Email Worker running on ${host}:${port}`);
+    console.log(`Email Worker running`);
     console.log('Listening for events:');
     console.log(`  - ${QueueNames.USER_REGISTERED}`);
     console.log(`  - ${QueueNames.USER_CREATED}`);

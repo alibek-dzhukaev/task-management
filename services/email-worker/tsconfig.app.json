@@ -22,6 +22,9 @@
   "references": [
     {
       "path": "../../libs/shared/messaging/tsconfig.lib.json"
+    },
+    {
+      "path": "../../libs/shared/metrics/tsconfig.lib.json"
     }
   ]
 }
